@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OLED — editor de telas</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span><strong>OLED</strong
+        ><span>Editor de telas</span>
+      </div>
+      <div class="save-area">
+        <span id="save-status" role="status">Carregando…</span
+        ><button id="retry-save" hidden>Tentar salvar</button>
+      </div>
+      <button id="export-project">Exportar projeto</button
+      ><button id="import-project">Importar JSON</button
+      ><input
+        id="file-input"
+        type="file"
+        accept=".json,application/json"
+        hidden
+      />
+    </header>
+    <div id="notice" role="status" hidden></div>
+    <div class="workspace">
+      <aside class="library">
+        <div class="section-heading">
+          <h1>Telas</h1>
+          <button id="new-screen" class="primary">Nova tela</button>
+        </div>
+        <p class="muted">Sua coleção, salva neste navegador.</p>
+        <nav id="screen-list" aria-label="Telas do projeto"></nav>
+        <div class="library-bottom">
+          <button id="duplicate">Duplicar tela</button
+          ><button id="delete-screen" class="danger">Excluir tela</button>
+        </div>
+      </aside>
+      <main id="main-editor">
+        <div class="editor-heading">
+          <div>
+            <label for="screen-name">Nome da tela</label
+            ><input id="screen-name" maxlength="80" autocomplete="off" />
+          </div>
+          <span class="dimensions">128 × 64 <span>· 8.192 LEDs</span></span>
+          <button
+            id="fullscreen"
+            aria-pressed="false"
+            aria-controls="main-editor"
+          >
+            Tela cheia
+          </button>
+        </div>
+        <div class="toolbar" aria-label="Ferramentas de desenho">
+          <div class="tools" role="group" aria-label="Modo de desenho">
+            <button data-tool="pencil" aria-pressed="true" title="Lápis (B)">
+              Lápis <kbd>B</kbd></button
+            ><button
+              data-tool="eraser"
+              aria-pressed="false"
+              title="Borracha (E)"
+            >
+              Borracha <kbd>E</kbd></button
+            ><button
+              data-tool="fill"
+              aria-pressed="false"
+              title="Preencher região (F)"
+            >
+              Preencher <kbd>F</kbd>
+            </button>
+          <button data-tool="select" aria-pressed="false" title="Selecionar área (S)">Selecionar <kbd>S</kbd></button>
+          </div>
+          <div class="history">
+            <button id="undo" title="Desfazer (Ctrl+Z)">Desfazer</button
+            ><button id="redo" title="Refazer (Ctrl+Shift+Z)">Refazer</button>
+          </div>
+        </div>
+        <div class="brush-controls">
+          <label for="brush-size">Tamanho do lápis / borracha</label>
+          <input id="brush-size" type="range" min="1" max="16" value="1" />
+          <output id="brush-size-value" for="brush-size">1 × 1 px</output>
+        </div>
+        <div class="position-controls" aria-label="Posicionar pixels">
+          <label for="move-area">Área</label>
+          <select id="move-area">
+            <option value="all">Tela inteira</option>
+            <option value="yellow">Faixa amarela</option>
+            <option value="blue">Faixa azul</option>
+            <option value="selection" disabled>Seleção manual</option>
+          </select>
+          <label for="move-ink">Pixels</label>
+          <select id="move-ink">
+            <option value="1">Acesos</option>
+            <option value="0">Apagados (texto preto)</option>
+          </select>
+          <div class="move-buttons" role="group" aria-label="Mover um pixel">
+            <button data-move="-1,0" aria-label="Mover 1 pixel para a esquerda" title="Mover para a esquerda"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M17 12H7 M11 7L6 12L11 17"/></svg></button>
+            <button data-move="0,-1" aria-label="Mover 1 pixel para cima" title="Mover para cima"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 17V7 M7 11L12 6L17 11"/></svg></button>
+            <button data-move="0,1" aria-label="Mover 1 pixel para baixo" title="Mover para baixo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 7V17 M7 13L12 18L17 13"/></svg></button>
+            <button data-move="1,0" aria-label="Mover 1 pixel para a direita" title="Mover para a direita"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M7 12H17 M13 7L18 12L13 17"/></svg></button>
+          </div>
+          <button id="center-pixels">Centralizar pixels</button>
+          <span id="selection-status" class="muted" role="status">Tela inteira · 128 × 64 px</span>
+        </div>
+        <p class="position-help muted">Selecione uma área arrastando na grade. No modo Selecionar, Shift + setas define a área e Enter confirma. As setas deslocam 1 px dentro da área; centralizar ajusta os dois eixos. Para texto preto na faixa amarela, escolha pixels apagados.</p>
+        <div class="canvas-controls">
+          <label><input id="grid" type="checkbox" checked /> Grade</label>
+          <label
+            title="Guias em x=64 e y=32; quatro quadrantes de 64×32 pixels"
+          >
+            <input id="quadrants" type="checkbox" checked /> Quadrantes </label
+          ><label for="zoom">Zoom</label
+          ><select id="zoom">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+            <option value="4">4×</option>
+            <option value="6" selected>6×</option>
+            <option value="8">8×</option>
+            <option value="10">10×</option>
+            <option value="12">12×</option></select
+          ><span id="coordinates" class="mono">x — · y —</span>
+        </div>
+        <div class="canvas-scroll">
+          <canvas
+            id="editor"
+            width="768"
+            height="384"
+            tabindex="0"
+            aria-label="Grade OLED editável. Setas movem o cursor; Espaço alterna o LED; Enter aplica a ferramenta. Use o mouse ou toque para desenhar. No modo Selecionar, arraste uma área; setas movem seus pixels; Shift e setas definem uma seleção pelo teclado; Enter termina a seleção; Escape volta à tela inteira."
+          ></canvas>
+        </div>
+        <div class="canvas-caption">
+          <span><i class="yellow"></i> Amarelo · linhas 0–15</span
+          ><span><i class="blue"></i> Azul · linhas 16–63</span
+          ><span id="pixel-count">0 LEDs acesos</span>
+        </div>
+        <div class="editor-footer">
+          <p>
+            Arraste para desenhar. Segure Shift para uma linha reta. Botão
+            direito apaga.<br />Na grade: setas movem o cursor; espaço alterna
+            um LED.
+          </p>
+          <div>
+            <button id="invert">Inverter</button
+            ><button id="clear">Limpar tela</button>
+          </div>
+        </div>
+        <section class="code-section">
+          <div class="section-heading">
+            <div>
+              <h2>Código para o ESP32</h2>
+              <p class="muted">Bitmap monocromático · Adafruit SSD1306 / GFX</p>
+            </div>
+            <button id="copy-code">Copiar código</button>
+          </div>
+          <textarea
+            id="code"
+            readonly
+            spellcheck="false"
+            aria-label="Código Arduino gerado"
+          ></textarea>
+          <p class="muted">
+            Use após inicializar <code>display</code>. A cor é definida
+            fisicamente pela posição do LED.
+          </p>
+        </section>
+      </main>
+      <aside class="inspector">
+        <h2>Prévia do OLED</h2>
+        <p class="muted">Sem grade. Os pixels apagados ficam pretos.</p>
+        <div class="oled-frame">
+          <canvas
+            id="preview"
+            width="128"
+            height="64"
+            aria-label="Prévia da tela selecionada"
+          ></canvas>
+        </div>
+        <div class="preview-scale">128 × 64 pixels · proporção 2:1</div>
+        <section class="exports">
+          <h2>Exportar esta tela</h2>
+          <button id="export-png" class="primary">Salvar PNG · 128 × 64</button
+          ><button id="export-screen">Salvar tela · JSON</button
+          ><button id="export-code">Salvar código · .h</button>
+          <p class="muted">
+            O PNG usa amarelo e azul. O JSON preserva os LEDs para continuar
+            editando.
+          </p>
+        </section>
+        <section class="help">
+          <h2>Do editor para o código</h2>
+          <p>
+            Salve o JSON em <code>display/screens/</code> e peça ao assistente
+            para editar. Depois, importe o arquivo atualizado aqui.
+          </p>
+          <p>
+            O projeto exportado reúne todas as telas. Guarde uma cópia: limpar
+            os dados do navegador remove o salvamento local.
+          </p>
+        </section>
+      </aside>
+    </div>
+    <dialog id="confirm-dialog">
+      <form method="dialog">
+        <h2 id="confirm-title"></h2>
+        <p id="confirm-body"></p>
+        <div class="dialog-actions">
+          <button value="cancel">Cancelar</button
+          ><button id="confirm-action" value="confirm" class="danger">
+            Confirmar
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <script src="core.js"></script>
+    <script src="seeds.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

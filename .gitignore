@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+wifi_config.h
+.env
+.env.*
+!.env.example
+.agents/
+.codex/
+.aws/
+.impeccable/
