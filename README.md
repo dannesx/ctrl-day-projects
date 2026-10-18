@@ -1,10 +1,11 @@
-# ESP32 — projetos com OLED
+# Ctrl Day Projects
 
-Experimentos com ESP32 e display OLED SSD1306 de 128 × 64 pixels.
+Projetos com ESP32, Arduino e interfaces para experimentos de eletrônica e robótica.
 
 - **clock/**: relógio com sincronização NTP e fuso UTC−3.
 - **jokenpo/**: jogo com reconhecimento de gestos pela webcam. Veja [as instruções](jokenpo/README.md).
 - **display/**: editor de telas para o OLED. Veja [as instruções](display/README.md).
+- **sonar/**: radar com Arduino Uno, sensor ultrassônico e interface Pygame. Veja [as instruções](sonar/README.md).
 
 ## Relógio
 
