@@ -1,0 +1,7 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../tic-tac-toe.ino'),'utf8').split('<script>')[1].split('</script>')[0];
+const nodes={};const element=()=>({style:{},disabled:false,textContent:'',setAttribute(){},append(){}});
+let tick,resolvePoll,hold=false;const calls=[];
+const context=vm.createContext({document:{querySelector:s=>nodes[s]??=(element()),createElement:element},URLSearchParams,AbortSignal,setInterval:f=>tick=f,fetch:async(path)=>{calls.push(path);if(path==='/state'&&hold)await new Promise(r=>resolvePoll=r);return {ok:true,json:async()=>({board:'---------',result:'-',turn:'X',revision:1})}}});
+const flush=()=>new Promise(r=>setImmediate(r));
+(async()=>{vm.runInContext(source,context);await flush();assert.equal(nodes['#restart'].disabled,false);hold=true;tick();await flush();assert.equal(nodes['#restart'].disabled,false,'Polling must not disable/fade the restart button');nodes['#restart'].onclick();await flush();assert.equal(nodes['#restart'].disabled,true,'A user action must lock duplicate clicks');resolvePoll();await flush();await flush();assert(calls.includes('/reset'),'Click during polling must reach the server');assert.equal(nodes['#restart'].disabled,false);console.log('PASS: polling stays enabled; reset during polling is delivered');})().catch(e=>{console.error(e.message);process.exit(1)});
