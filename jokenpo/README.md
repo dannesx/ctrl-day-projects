@@ -1,16 +1,16 @@
 # Jokenpo: webcam + ESP32
 
-O computador reconhece a mão usando OpenCV e MediaPipe Gesture Recognizer. Os frames ficam no computador. O ESP32 controla a rodada e sorteia sua escolha no início, antes de receber a escolha do jogador. A comunicação usa HTTP na rede local.
+O computador reconhece a mão usando OpenCV e MediaPipe Gesture Recognizer. Os frames ficam no computador. O ESP32 controla a rodada e sorteia sua escolha no início, sem usar a escolha do jogador no sorteio. A comunicação usa HTTP na rede local.
 
 ## Como jogar
 
-1. Segure um 👍 por 0,6 segundo para começar.
-2. O OLED mostra `JO`, `KEN`, `PO!!`, cada um durante 1 segundo, em fonte ampliada 5× e centralizada na faixa azul. A faixa amarela fica apagada durante a contagem.
-3. Durante o `PO!!`, mostre a escolha e mantenha até terminar: punho fechado = pedra; palma aberta = papel; indicador e médio em V = tesoura.
-4. Ao completar 3 segundos, o ESP usa o último gesto estável e recente. Mostra as duas escolhas e vitória, derrota ou empate durante 5 segundos.
-5. Volta ao standby. Solte o joinha por pelo menos meio segundo antes de fazer outro.
+1. Mostre pedra, papel ou tesoura por 0,3 segundo para começar automaticamente.
+2. O OLED mostra `JO`, `KEN`, `PO!!`, cada um durante 0,7 segundo, em fonte ampliada 5× e centralizada na faixa azul. A faixa amarela fica apagada durante a contagem.
+3. A primeira escolha estável fica salva no ESP ao iniciar: punho fechado = pedra; mão aberta = papel; indicador e médio em V = tesoura. Pode retirar ou mudar a mão durante a contagem: a jogada confirmada não muda.
+4. Ao completar 2,1 segundos, o ESP resolve a rodada com a escolha confirmada no início. Mostra as duas escolhas e vitória, derrota ou empate durante 3,5 segundos.
+5. Volta ao standby. Após o resultado, manter qualquer opção por 0,3 segundo inicia outra rodada, mesmo sem retirar a mão ou mudar de gesto. O início só é enviado uma vez enquanto aguarda a resposta do ESP.
 
-Sem gesto válido ao terminar, a rodada mostra `SEM JOGADA`. Imagens ruins ou conexão perdida não reutilizam a escolha de uma rodada anterior. Use uma mão, bem iluminada e completamente visível, voltada para a câmera.
+Sem uma escolha válida não se inicia a rodada. Depois que o ESP confirma a escolha, perder a imagem ou a conexão durante a contagem não apaga nem altera essa jogada. Cada nova rodada exige uma nova confirmação estável. Use uma mão, bem iluminada e completamente visível. Pedra, papel e tesoura são classificados pela posição dos dedos em 3D, aceitando palma ou costas da mão voltadas à câmera; qualquer uma das três opções inicia a rodada automaticamente. Somente pedra, papel e tesoura são opções: joinha e outros gestos reconhecidos pelo modelo são ignorados. Poses ambíguas não enviam jogada.
 
 ## Placa e display
 
@@ -27,6 +27,15 @@ make upload
 
 A gravação substitui o relógio na placa; os arquivos de `clock` continuam disponíveis. Se necessário, segure BOOT durante `Connecting...`. O IP aparece no OLED em standby e no monitor serial a 115200 baud.
 
+## Buzzer
+
+Buzzer passivo: positivo/sinal → D23 (GPIO23), negativo → GND.
+A contagem toca JO em 660 Hz por 140 ms, KEN em 880 Hz por 140 ms
+ e PO em 1320 Hz por 600 ms. O PWM não bloqueia a leitura dos gestos
+nem o servidor HTTP. Vitória do jogador toca uma melodia ascendente; derrota,
+uma descendente; empate, três notas iguais. Cada melodia dura 900 ms
+e toca uma única vez ao mostrar o resultado. Sem jogada válida não há melodia. Um buzzer ativo pode não reproduzir tons diferentes.
+
 ## Computador
 
 Crie um ambiente virtual com uma versão de Python suportada pelos pacotes. Python 3.11 ou 3.12 é uma opção prática; se o pip disser `No matching distribution` no Python 3.14, use uma dessas versões:
@@ -38,7 +47,9 @@ make run ESP=http://192.168.1.100
 
 Substitua pelo IP exibido na placa. Pode também usar `make run` para tentar `http://jokenpo.local` via mDNS. A primeira execução baixa o modelo oficial (~8 MB); depois o reconhecimento funciona localmente. Não precisa de chave de API.
 
-Para selecionar outra câmera:
+O comando `make run` prefere automaticamente a webcam externa USB. Sem webcam externa, usa a câmera padrão.
+
+Para selecionar outra câmera manualmente:
 
 ```bash
 .venv/bin/python webcam.py --esp http://192.168.1.100 --camera 1
@@ -53,7 +64,7 @@ Q ou Esc encerra. `make test` verifica estabilidade dos gestos e prevenção de 
 
 ## Fluidez e reconhecimento
 
-O preview, a inferência e a comunicação Wi-Fi agora trabalham separadamente. O processamento descarta frames pendentes antigos, usa imagens de 480 pixels de largura e tolera falhas de detecção inferiores a 150 ms. O preview mostra FPS e confiança para facilitar a avaliação na webcam real.
+O preview, a inferência e a comunicação Wi-Fi agora trabalham separadamente. O processamento descarta frames pendentes antigos, usa imagens de 640 pixels de largura e tolera falhas de detecção inferiores a 150 ms. O preview desenha os pontos da mão e informa se a mão não foi detectada, se a pose está indefinida ou se a rodada está sendo iniciada. A classificação combina geometria 3D dos dedos (com tolerância à curvatura) e o modelo treinado como alternativa quando a geometria é ambígua e a confiança é de pelo menos 0,65. Poses geométricas não exibem porcentagens inventadas. O Wi-Fi do ESP fica sem economia de energia, e o cliente tolera respostas de até 1,2 segundo sem bloquear o preview.
 
 Em computadores lentos, reduza a largura de inferência:
 
@@ -61,4 +72,4 @@ Em computadores lentos, reduza a largura de inferência:
 .venv/bin/python webcam.py --esp http://192.168.1.100 --inference-width 320
 ```
 
-O limiar padrão de confiança é 0,50. Para uma exigência maior, use `--confidence 0.65`. A câmera continua em 640×480; somente a imagem enviada ao modelo é reduzida. Mantenha a mão inteira visível e iluminada.
+O limiar padrão de confiança é 0,50. Para uma exigência maior, use `--confidence 0.65`. A câmera solicita 640×360 em MJPEG a 30 FPS; a taxa efetiva depende dos modos suportados pela webcam e aparece no preview. Somente a imagem enviada ao modelo é reduzida. Mantenha a mão inteira visível e iluminada.

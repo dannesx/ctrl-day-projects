@@ -12,13 +12,58 @@ Adafruit_SSD1306 display(128, 64, &Wire, -1);
 WebServer server(80);
 enum Phase { STANDBY, COUNTDOWN, RESULT };
 Phase phase = STANDBY;
-uint32_t started = 0, resultStarted = 0, gestureAt = 0, lastDraw = 0;
+uint32_t started = 0, resultStarted = 0, lastDraw = 0;
 uint32_t roundId = 0;
-int player = -1, computer = -1, latestGesture = -1;
+int player = -1, computer = -1;
 bool oled = false;
 const char* choices[] = {"PEDRA", "PAPEL", "TESOURA"};
 String verdict;
 uint16_t textColor = SSD1306_WHITE;
+constexpr uint8_t BUZZER_PIN = 23;
+constexpr uint32_t CUE_MS = 700;
+bool buzzerReady = false;
+int buzzerCue = -1;
+
+void setBuzzerTone(uint16_t frequency) {
+  static uint16_t playing = 0;
+  if (frequency != playing) {
+    ledcWriteTone(BUZZER_PIN, frequency);
+    playing = frequency;
+  }
+}
+
+void updateBuzzer() {
+  if (!buzzerReady) return;
+  if (phase == RESULT) {
+    uint32_t elapsed = millis() - resultStarted;
+    // Durations include a short silent gap between the first two notes.
+    const uint16_t win[] = {523, 659, 1047};
+    const uint16_t lose[] = {392, 330, 196};
+    const uint16_t tie[] = {660, 660, 660};
+    const uint16_t* notes = verdict == "VOCE GANHOU!" ? win
+      : verdict == "ESP GANHOU!" ? lose : verdict == "EMPATE!" ? tie : nullptr;
+    uint16_t frequency = 0;
+    if (notes && elapsed < 900) {
+      const int note = elapsed < 220 ? 0 : elapsed < 440 ? 1 : 2;
+      const uint32_t within = elapsed - note * 220;
+      if (within < (note == 2 ? 460U : 160U)) frequency = notes[note];
+    }
+    setBuzzerTone(frequency);
+    buzzerCue = -1;
+    return;
+  }
+  if (phase != COUNTDOWN) {
+    setBuzzerTone(0);
+    buzzerCue = -1;
+    return;
+  }
+  const uint32_t elapsed = millis() - started;
+  const int cue = elapsed / CUE_MS;
+  const uint16_t frequencies[] = {660, 880, 1320};
+  const uint16_t durations[] = {140, 140, 600};
+  setBuzzerTone(cue < 3 && elapsed % CUE_MS < durations[cue] ? frequencies[cue] : 0);
+  buzzerCue = cue;
+}
 
 void text(const String& value, int y, int size = 1, bool bold = true, int left = 0, int width = 128) {
   int16_t x1, y1; uint16_t w, h;
@@ -80,7 +125,6 @@ void status() {
 }
 
 void finishRound() {
-  player = latestGesture >= 0 && millis() - gestureAt <= 600 ? latestGesture : -1;
   if (player < 0) verdict = "SEM JOGADA";
   else if (player == computer) verdict = "EMPATE!";
   else if ((player - computer + 3) % 3 == 1) verdict = "VOCE GANHOU!";
@@ -105,11 +149,11 @@ void draw() {
   if (WiFi.status() != WL_CONNECTED) {
     text("Conectando Wi-Fi", 24, 1, false); text("Confira rede/senha", 44, 1, false);
   } else if (phase == STANDBY) {
-    text("Faca um joinha", 22, 1, false); text("para comecar", 34, 1, false);
+    text("Mostre sua mao", 22, 1, false); text("PEDRA PAPEL TESOURA", 34, 1, false);
     text(WiFi.localIP().toString(), 54, 1, false);
   } else if (phase == COUNTDOWN) {
     uint32_t elapsed = millis() - started;
-    const char* cue = elapsed < 1000 ? "JO" : elapsed < 2000 ? "KEN" : "PO!!";
+    const char* cue = elapsed < CUE_MS ? "JO" : elapsed < 2 * CUE_MS ? "KEN" : "PO!!";
     text(cue, 22, 5);
   } else {
     display.drawFastVLine(64, 19, 43, SSD1306_WHITE);
@@ -123,6 +167,10 @@ void draw() {
 
 void setup() {
   Serial.begin(115200);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  buzzerReady = ledcAttach(BUZZER_PIN, 660, 10);
+  if (!buzzerReady) Serial.println("Buzzer: falha ao configurar GPIO23");
   Wire.begin(21, 22);
   for (uint8_t address : {0x3C, 0x3D}) {
     Wire.beginTransmission(address);
@@ -135,30 +183,32 @@ void setup() {
   display.setTextColor(SSD1306_WHITE); display.setTextWrap(false);
   WiFi.mode(WIFI_STA); WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setSleep(false);  // Keep HTTP gesture delivery responsive during countdown.
   server.on("/status", HTTP_GET, status);
   server.on("/start", HTTP_POST, []() {
     if (phase != STANDBY) { server.send(409, "text/plain", "Rodada em andamento"); return; }
-    ++roundId; phase = COUNTDOWN; started = millis(); latestGesture = -1;
-    player = -1; computer = esp_random() % 3; verdict = "";
+    const String move = server.arg("move");
+    if (move != "0" && move != "1" && move != "2") {
+      server.send(400, "text/plain", "Escolha pedra, papel ou tesoura para iniciar"); return;
+    }
+    computer = esp_random() % 3;
+    player = move.toInt();  // Commit once, together with the new round.
+    ++roundId; phase = COUNTDOWN; started = millis(); verdict = "";
+    buzzerCue = -1;
+    updateBuzzer();
     status();
   });
   server.on("/gesture", HTTP_POST, []() {
-    String round = server.arg("round"), move = server.arg("move");
-    if (phase != COUNTDOWN || round != String(roundId)) {
-      server.send(409, "text/plain", "Rodada encerrada ou invalida"); return;
-    }
-    if (move != "-1" && move != "0" && move != "1" && move != "2") {
-      server.send(400, "text/plain", "Jogada invalida"); return;
-    }
-    latestGesture = move.toInt(); gestureAt = millis(); status();
+    server.send(409, "text/plain", "Jogada ja confirmada no inicio da rodada");
   });
   server.begin(); draw();
 }
 
 void loop() {
-  // Encerra antes de atender novos gestos: nada pode alterar a jogada depois do prazo.
-  if (phase == COUNTDOWN && millis() - started >= 3000) finishRound();
-  if (phase == RESULT && millis() - resultStarted >= 5000) phase = STANDBY;
+  // The choice is committed at start and remains fixed through the countdown.
+  if (phase == COUNTDOWN && millis() - started >= 3 * CUE_MS) finishRound();
+  if (phase == RESULT && millis() - resultStarted >= 3500) phase = STANDBY;
+  updateBuzzer();
   server.handleClient();
   static bool announced = false;
   static uint32_t retryAt = 0;

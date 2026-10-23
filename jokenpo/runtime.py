@@ -55,15 +55,15 @@ class NetworkClient:
         self.stop = threading.Event()
         self.state = {"state": "offline"}
         self.error = ""
-        self.move, self.observed_at = -1, 0
-        self.start_pending = False
+        self.pending_move = None
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
 
     def update(self, move, observed_at, start=False):
         with self.lock:
-            self.move, self.observed_at = move, observed_at
-            self.start_pending |= start
+            if start and move in (0, 1, 2) and time.monotonic() - observed_at <= .35:
+                if self.pending_move is None:
+                    self.pending_move = move
 
     def snapshot(self):
         with self.lock:
@@ -72,15 +72,11 @@ class NetworkClient:
     def _run(self):
         while not self.stop.is_set():
             with self.lock:
-                start, self.start_pending = self.start_pending, False
-                state = dict(self.state)
-                move = self.move if time.monotonic() - self.observed_at <= .35 else -1
+                move, self.pending_move = self.pending_move, None
             try:
-                if start:
+                if move is not None:
                     # Consume once, even on timeout: never replay an ambiguous start.
-                    response = self.request(self.base, "/start", {})
-                elif state["state"] == "countdown":
-                    response = self.request(self.base, "/gesture", {"round": state["round"], "move": move})
+                    response = self.request(self.base, "/start", {"move": move})
                 else:
                     response = self.request(self.base, "/status")
                 with self.lock:
