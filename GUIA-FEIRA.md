@@ -59,7 +59,19 @@ No Push Button, durante a disputa, segure os dois botões continuamente por **tr
 
 ## Casa e prévia local
 
-O controle fica em `smart-house-test`, com autenticação e OTA preservadas. Modos: `manual`, `hsl_cycle`, `snow`, `halloween`, `christmas`. Os identificadores antigos `breathing`, `color_wave`, `chase`, `blink` retornam HTTP 400.
+O controle fica em `smart-house-test`, com autenticação e OTA preservadas. Modos: `manual`, `hsl_cycle`, `snow`, `halloween`, `christmas`, `matrix`. Os identificadores antigos `breathing`, `color_wave`, `chase`, `blink` retornam HTTP 400. As ligações e os comandos atuais estão em [WEB.md](smart-house-test/WEB.md).
+
+Na mesma rede da placa, abra o IP informado por ela ou `http://smart-house.local/` e entre com o usuário e senha OTA de `wifi_config.h`. Ao reiniciar, a casa volta ao ciclo de cores, com todos os andares ligados e brilho de 100% na interface, limitado a 191/255 no hardware. Os ajustes não são persistidos.
+
+### Preparar o som da casa
+
+O firmware atual inclui voz com MAX98357A e alto-falante de 4 Ω / 3 W. Com a alimentação desligada, ligue BCLK → GPIO26, LRC/WS → GPIO25, DIN → GPIO27, VIN → fonte regulada de 5 V e GND → GND comum da fonte e ESP32. Os dois terminais do falante vão às saídas + e − do amplificador; nenhum vai ao GND. Veja [AUDIO.md](smart-house-test/AUDIO.md) para os detalhes de montagem e gravação do firmware.
+
+Antes da feira, abra **Gravações** (`/audio`) na interface autenticada e confira os 15 arquivos disponíveis, incluindo `inicio.wav` e `matrix.wav`. Envie os ausentes em WAV PCM mono, 16 bits, 16 kHz, conforme a tabela de [frases e nomes](smart-house-test/AUDIO.md). Se a memória ainda não estiver preparada, siga a confirmação da página: a preparação apaga a partição de dados de áudio.
+
+Comece com volume de 25%. Reinicie para conferir a fala inicial e altere energia, andares e modos para conferir os anúncios. Teste silêncio e ações rápidas. A reprodução é local e não precisa de internet; arquivos ausentes deixam a ação sem fala, mas não impedem o controle das luzes. O volume e o silêncio voltam ao padrão após reiniciar.
+
+### Prévia sem maquete
 
 Para revisar sem maquete, com Python e Node.js instalados:
 
@@ -67,7 +79,7 @@ Para revisar sem maquete, com Python e Node.js instalados:
 python .\smart-house-test\preview.py
 ```
 
-Abra `http://127.0.0.1:8765`. A prévia é local, não tem OTA e usa a mesma página e o mesmo motor C++ `effects.h`, pré-compilado em `effects.wasm`. O brilho é aplicado pela apresentação na prévia e pelo FastLED na fita; cores não equivalem à calibração física dos LEDs. Após alterar o motor, recompile com `smart-house-test/build-preview.ps1 -Clang caminho\clang++.exe`. Nenhum efeito exige internet.
+Abra `http://127.0.0.1:8765`. A prévia é local, não tem OTA e usa a mesma página e o mesmo motor C++ `effects.h`, pré-compilado em `effects.wasm`. O áudio é simulado em RAM: não emite som nem persiste os arquivos enviados. O brilho é aplicado pela apresentação na prévia e pelo FastLED na fita; cores não equivalem à calibração física dos LEDs. Após alterar o motor, recompile com `smart-house-test/build-preview.ps1 -Clang caminho\clang++.exe`. Nenhum efeito exige internet.
 
 ## Conferência física antes de abrir
 
@@ -76,7 +88,7 @@ Abra `http://127.0.0.1:8765`. A prévia é local, não tem OTA e usa a mesma pá
 3. Confira webcam selecionada, imagem espelhada, pontos verdes e pedra/papel/tesoura. Verifique contagem, OLED, buzzer e resultado. Reabra o painel e confira que o total continua.
 4. Jogue da velha pelos botões: seleção, confirmação, início alternado e reinício automático. Treine durante uma partida e confira substituição, 200.000 episódios, timer e próxima partida aleatória após expiração. Simulações não devem aumentar KPIs.
 5. No Push Button, teste debounce/pontos, pressão de 2,9 s (cancela ao soltar), 3 s (zera), manutenção dos botões (não repete) e soltura/rearme; confira resultado e reinício normal.
-6. Na casa, confira cada andar, cor, brilho, Neve, Halloween e Natal; desligue um andar durante cada efeito. Confira login, conexão e página OTA sem enviar atualização durante a feira.
+6. Na casa, confira cada andar, cor, brilho, Ciclo de cores, Neve, Halloween, Natal e Matrix; desligue um andar durante cada efeito. Confira as 15 gravações, fala inicial, anúncios de energia/andar/modo, volume, silêncio e comandos rápidos durante a reprodução. Confira login, conexão e página OTA sem enviar atualização durante a feira.
 7. Inicie uma sessão real nova em F2/N quando a conferência terminar.
 
 ## Verificações automatizadas
