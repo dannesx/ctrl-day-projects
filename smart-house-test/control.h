@@ -15,7 +15,7 @@ String controlState() {
     if (i) state += ',';
     state += String("{\"id\":\"") + level.id + "\",\"on\":" + (level.on ? "true" : "false") +
       ",\"color\":\"" + color + "\",\"leds\":" + String(level.count) + ",\"rendered_color\":\"" + rendered + "\"";
-    if (lightingMode == "snow" || lightingMode == "halloween") {
+    if (lightingMode == "snow" || lightingMode == "halloween" || lightingMode == "christmas") {
       state += ",\"pixels\":[";
       for (uint8_t pixel = 0; pixel < level.count; ++pixel) {
         const CRGB value = level.strip[pixel];
@@ -63,7 +63,7 @@ void controlSetup() {
       FastLED.setBrightness((value * 255 + 50) / 100);
     } else if (action == "mode") {
       const String value = otaServer.arg("value");
-      if (value != "manual" && value != "hsl_cycle" && value != "breathing" && value != "color_wave" && value != "chase" && value != "snow" && value != "halloween" && value != "blink") { invalid(); return; }
+      if (value != "manual" && value != "hsl_cycle" && value != "snow" && value != "halloween" && value != "christmas") { invalid(); return; }
       lightingMode = value;
     } else if (action == "snow") {
       uint16_t speed = snowSpeed, density = snowDensity;

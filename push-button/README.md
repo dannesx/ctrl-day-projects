@@ -39,3 +39,9 @@ preenche A1 ate A8, depois B1 ate B8 e assim por diante; o azul preenche H1 ate 
 depois G1 ate G8, seguindo em direcao ao centro. Ajuste
 `SERPENTINE`, `LEFT_MATRIX_FIRST` ou `pixelAt()` se sua montagem for diferente.
 O protocolo configurado e WS2812B (GRB, 800 kHz).
+
+## Reset durante a disputa
+
+Segure os dois botões continuamente por três segundos durante o jogo para zerar
+os placares e reiniciar 3, 2, 1, GO. Soltar qualquer botão antes cancela. Solte
+ambos para rearmar; manter pressionados não repete o reset.

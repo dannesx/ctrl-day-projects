@@ -6,7 +6,7 @@
 #include <Update.h>
 #include "wifi_config.h"
 
-constexpr const char* FIRMWARE_VERSION = "smart-house-web-8";
+constexpr const char* FIRMWARE_VERSION = "smart-house-fair-9";
 class OtaWebServer : public WebServer {
  public:
   OtaWebServer() : WebServer(80) {}

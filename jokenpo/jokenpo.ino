@@ -5,7 +5,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <esp_random.h>
+#if __has_include("wifi_config.h")
 #include "wifi_config.h"
+#else
+const char* WIFI_SSID = "";
+const char* WIFI_PASSWORD = "";
+#endif
+#include "fair_serial.h"
 #include "hands.h"
 
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
@@ -115,13 +121,23 @@ void drawHand(int choice, int column) {
 }
 
 
-void status() {
+const char* fairProject() { return "jokenpo"; }
+String fairState() {
   const char* name = phase == STANDBY ? "standby" : phase == COUNTDOWN ? "countdown" : "result";
-  String body = "{\"state\":\"" + String(name) + "\",\"round\":" + String(roundId);
-  body += ",\"elapsed_ms\":" + String(phase == COUNTDOWN ? millis() - started : 0);
-  body += ",\"player\":" + String(player) + ",\"computer\":" + String(phase == RESULT ? computer : -1);
-  body += ",\"result\":\"" + verdict + "\"}";
-  server.send(200, "application/json", body);
+  return String(",\"state\":\"") + name + "\",\"round\":" + roundId +
+    ",\"elapsed_ms\":" + (phase==COUNTDOWN ? millis()-started : 0) +
+    ",\"player\":" + player + ",\"computer\":" + (phase==RESULT?computer:-1) +
+    ",\"result\":\"" + verdict + "\"";
+}
+void status() { server.send(200,"application/json", "{" + fairState().substring(1) + "}"); }
+bool startRound(int move) {
+  if(phase!=STANDBY || move<0 || move>2) return false;
+  computer=esp_random()%3; player=move;
+  ++roundId; phase=COUNTDOWN; started=millis(); verdict="";
+  buzzerCue=-1; updateBuzzer(); return true;
+}
+void fairCommand(JsonDocument& command) {
+  if(command["type"]=="start" && command["move"].is<int>()) startRound(command["move"]);
 }
 
 void finishRound() {
@@ -131,6 +147,7 @@ void finishRound() {
   else verdict = "ESP GANHOU!";
   phase = RESULT;
   resultStarted = millis();
+  fairResult(roundId, fairState() + ",\"outcome\":\"" + (player==computer?"draw":(player-computer+3)%3==1?"win":"loss") + "\"");
 }
 
 void draw() {
@@ -143,14 +160,12 @@ void draw() {
   }
   const String heading = phase != RESULT ? String("JOKENPO")
     : verdict == "VOCE GANHOU!" ? String("> VOCE VENCEU <") : verdict;
-  if (phase != COUNTDOWN) text(heading, 4, 1, phase == RESULT && WiFi.status() == WL_CONNECTED);
+  if (phase != COUNTDOWN) text(heading, 4, 1, phase == RESULT);
   textColor = SSD1306_WHITE;
   display.setTextColor(textColor);
-  if (WiFi.status() != WL_CONNECTED) {
-    text("Conectando Wi-Fi", 24, 1, false); text("Confira rede/senha", 44, 1, false);
-  } else if (phase == STANDBY) {
+  if (phase == STANDBY) {
     text("Mostre sua mao", 22, 1, false); text("PEDRA PAPEL TESOURA", 34, 1, false);
-    text(WiFi.localIP().toString(), 54, 1, false);
+    text(WiFi.status()==WL_CONNECTED?WiFi.localIP().toString():String("USB 115200"), 54, 1, false);
   } else if (phase == COUNTDOWN) {
     uint32_t elapsed = millis() - started;
     const char* cue = elapsed < CUE_MS ? "JO" : elapsed < 2 * CUE_MS ? "KEN" : "PO!!";
@@ -167,6 +182,7 @@ void draw() {
 
 void setup() {
   Serial.begin(115200);
+  fairBegin();
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   buzzerReady = ledcAttach(BUZZER_PIN, 660, 10);
@@ -182,7 +198,7 @@ void setup() {
   if (!oled) Serial.println("OLED nao encontrado");
   display.setTextColor(SSD1306_WHITE); display.setTextWrap(false);
   WiFi.mode(WIFI_STA); WiFi.setAutoReconnect(true);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  if(strlen(WIFI_SSID)) WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   WiFi.setSleep(false);  // Keep HTTP gesture delivery responsive during countdown.
   server.on("/status", HTTP_GET, status);
   server.on("/start", HTTP_POST, []() {
@@ -191,11 +207,7 @@ void setup() {
     if (move != "0" && move != "1" && move != "2") {
       server.send(400, "text/plain", "Escolha pedra, papel ou tesoura para iniciar"); return;
     }
-    computer = esp_random() % 3;
-    player = move.toInt();  // Commit once, together with the new round.
-    ++roundId; phase = COUNTDOWN; started = millis(); verdict = "";
-    buzzerCue = -1;
-    updateBuzzer();
+    startRound(move.toInt());
     status();
   });
   server.on("/gesture", HTTP_POST, []() {
@@ -205,6 +217,7 @@ void setup() {
 }
 
 void loop() {
+  fairLoop(roundId);
   // The choice is committed at start and remains fixed through the countdown.
   if (phase == COUNTDOWN && millis() - started >= 3 * CUE_MS) finishRound();
   if (phase == RESULT && millis() - resultStarted >= 3500) phase = STANDBY;

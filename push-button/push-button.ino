@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include "reset_gesture.h"
 
 // Arduino Uno: botoes entre D2/D3 e GND. D4 -> DIN da matriz esquerda.
 // DOUT da esquerda -> DIN da direita. Matrizes WS2812B, 8x8 cada.
@@ -31,6 +32,7 @@ uint8_t yellowScore = 0;
 uint8_t blueScore = 0;
 bool restartArmed = false;
 bool winnerVisible = true;
+ResetGesture resetGesture;
 
 bool updateButton(Button &button, uint32_t now) {
   bool reading = digitalRead(button.pin);
@@ -122,6 +124,8 @@ void loop() {
   // Atualiza inclusive durante a contagem: segurar nao gera pontos na largada.
   bool yellowPressed = updateButton(yellow, now);
   bool bluePressed = updateButton(blue, now);
+
+  if(resetGesture.update(now,yellow.stable==LOW,blue.stable==LOW,phase==PLAYING)) startRound(now);
 
   if (phase == COUNTDOWN) {
     uint32_t elapsed = now - phaseStarted;

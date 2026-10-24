@@ -73,3 +73,10 @@ Em computadores lentos, reduza a largura de inferência:
 ```
 
 O limiar padrão de confiança é 0,50. Para uma exigência maior, use `--confidence 0.65`. A câmera solicita 640×360 em MJPEG a 30 FPS; a taxa efetiva depende dos modos suportados pela webcam e aparece no preview. Somente a imagem enviada ao modelo é reduzida. Mantenha a mão inteira visível e iluminada.
+
+## Feira: USB e painel integrado
+
+Use [o iniciador e guia da feira](../GUIA-FEIRA.md) para o painel em duas colunas.
+O firmware também aceita USB a 115200 baud sem Wi-Fi e sem `wifi_config.h`.
+Instale ArduinoJson 7.4.2 ao compilar. O HTTP continua disponível com rede configurada.
+Resultados usam ACK/reenvio por inicialização; veja [o protocolo](../fair/PROTOCOL.md).

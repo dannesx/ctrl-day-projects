@@ -1,6 +1,6 @@
-# Teste de LEDs do terceiro andar
+# Controle de luzes da casa
 
-**Versão atual: controle pelo navegador.** Consulte [o painel web e seus comandos](WEB.md). O histórico abaixo descreve as etapas anteriores de teste.
+**Versão atual: controle pelo navegador para a feira.** Consulte [o painel web, prévia local e comandos](WEB.md) e [o guia de operação](../GUIA-FEIRA.md). Cinco modos: cores fixas, ciclo de cores, Neve, Halloween e Natal. O histórico abaixo descreve as etapas anteriores de teste.
 
 Acende os 30 LEDs dos tr?s andares: 12 em D14 / GPIO14, 9 em D12 / GPIO12 e 9 em D13 / GPIO13. Todos mostram a mesma cor em um ciclo cont?nuo de matiz HSL de **8 segundos**, com brilho global **255/255 (100%)**.
 

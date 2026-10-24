@@ -6,6 +6,24 @@ partida anterior foi interrompida. Reiniciar a placa volta o início para você.
 sem estratégia. A página web e o OLED mostram a mesma partida. Vitória e
 empate encerram a rodada; **Nova partida** limpa o tabuleiro.
 
+## Botoes: jogar sem celular
+
+O jogo funciona diretamente no OLED, sem conectar celular ou hospedar servidor.
+Ligue um botao entre **GPIO18 (D18) e GND** e outro entre **GPIO19 (D19) e GND**.
+Ambos usam `INPUT_PULLUP`, com debounce, sem resistores externos.
+
+- **D18:** avanca para a proxima casa livre, na ordem das linhas, voltando ao
+  inicio ao chegar ao fim. A casa selecionada mostra um X piscando.
+- **D19:** confirma a casa selecionada. Depois do resultado, inicia nova partida.
+- Depois de vitoria, derrota ou empate, uma nova partida comeca automaticamente
+  apos 3 segundos de resultado, alternando quem inicia. D19 permite antecipar.
+- **D18 + D19 por 1 segundo:** inicia o treino. Solte os dois para usar novamente.
+  O gesto de treino nao confirma jogadas nem muda a selecao.
+
+As acoes individuais acontecem ao soltar o botao, para distinguir o treino.
+Durante o treino os botoes de jogo ficam bloqueados; o OLED mostra o progresso.
+O jogo web continua disponivel como opcao, compartilhando a mesma partida.
+
 ## Hardware
 
 Mesmo SSD1306 I²C 128×64 do Jokenpo:
@@ -55,8 +73,12 @@ e comandos de uma versão antiga do tabuleiro. A página sincroniza a cada
 **TREINAR** executa 200.000 partidas simuladas de autojogo na própria placa.
 A web mostra animação e progresso real; o OLED mostra pontos animados e uma
 barra de progresso. Jogadas e reinícios ficam bloqueados durante o treino.
-Ao terminar, a partida atual é retomada em **Modo treinado**. Treinar não
-altera a alternância de quem inicia. **TREINAR NOVAMENTE** refaz o modelo.
+Ao terminar, o treino vale por **cinco minutos**, contados pela placa. A partida
+interrompida durante o treino não gera resultado; uma substituta treinada abre
+com o mesmo jogador inicial, preservando a alternância seguinte. Se a validade
+expirar durante essa partida, ela termina treinada e a seguinte será aleatória.
+OLED, web e painel exibem modo e timer. **TREINAR NOVAMENTE** renova o prazo
+somente após concluir os 200.000 episódios.
 
 O algoritmo é Q-learning tabular sobre *afterstates*: cada ação é representada
 pelo tabuleiro resultante, normalizado para quem acabou de jogar. A tabela tem
@@ -67,11 +89,10 @@ movimento do adversário entra com sinal negativo. Não há minimax ou regras de
 bloqueio/vitória embutidas no jogador treinado: ele escolhe o maior valor
 aprendido entre movimentos legais, com desempate determinístico.
 
-O modelo é salvo em `/ttt-model.bin` no LittleFS com versão e checksum, usando
-um arquivo temporário antes da substituição. Esta versão inicializa/formata a
-partição LittleFS caso ela não possa ser montada. Se salvar falhar, a interface
-informa que o aprendizado só vale até desligar. Um modelo válido é carregado
-ao ligar; **Nova partida** não apaga o aprendizado. A partida em si não é salva.
+O treinamento fica apenas na RAM. Reiniciar ou desligar o ESP descarta todo o
+aprendizado e volta ao modo aleatório, com zero episódios. **Nova partida** e o
+reinício automático após o resultado mantêm o treinamento enquanto a placa
+continuar ligada e a validade não expirar. Modelos salvos por versões antigas não são carregados.
 
 O treino ocorre em lotes de aproximadamente 4 ms para continuar atendendo HTTP.
 O tempo total depende da placa. Fechar o navegador não interrompe o treino.
@@ -85,3 +106,9 @@ make -C tic-tac-toe test
 
 Requer Node.js e compilador C++. Inclui regressão do botão durante polling e
 avaliação do mesmo algoritmo C++ usado no firmware contra adversário aleatório.
+
+## Painel da feira por USB
+
+Consulte [o guia](../GUIA-FEIRA.md) e [o protocolo](../fair/PROTOCOL.md).
+A serial usa 115200 baud e ArduinoJson 7.4.2. O painel persiste somente partidas
+concluídas dos visitantes; treino fica na RAM, sem gravação em flash.
