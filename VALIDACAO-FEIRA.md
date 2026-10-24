@@ -31,3 +31,13 @@ Artefatos ficam em `.build`, ignorada pelo Git. A casa foi compilada com a confi
 Sem ensaio físico nesta implementação: câmera real/iluminação, gestos em movimento, drivers/cabos e reconexão USB real, OLED, buzzer, debounce dos botões e LEDs. Expiração durante partida e alternância após treino foram implementadas e revisadas; a sequência completa na placa deve seguir [o guia](GUIA-FEIRA.md).
 
 O iniciador teve sintaxe e seus componentes verificados (ambiente, dependências, modelo e abertura do painel); a instalação automática de Python em um Windows limpo, por winget ou instalador oficial, não foi executada neste computador já equipado. A autenticação e OTA reais foram preservadas no código e compiladas, mas não houve chamada à maquete nesta execução. O script `check-web.cjs` permite essa validação explícita posterior.
+
+## Renovação visual — 24/10/2026
+
+- Gráficos em `fair/charts.py`: agregação por sessão, percentuais por série/modo e resultados pela perspectiva do jogador. Renderização Matplotlib Agg com estilo Seaborn e cache por agregado; mudança de sessão invalida as três imagens.
+- `python -m unittest discover -s fair -p "test_*.py"`: 7 testes aprovados, incluindo sessão vazia, resultado único, distribuição mista, modo vazio, denominadores e cache.
+- Demonstração Pygame capturada em 1366×768 e 1920×1080. Envio local de F2/N/F2 confirmou nova sessão, gráficos vazios e ausência de nova renderização no frame seguinte.
+- `node smart-house-test/check-preview.cjs`: aprovado nas 15 combinações dos cinco modos com 1366×768, 1920×1080 e 390×844. Verificados energia geral, andar, cor, brilho, ajustes de neve, desconexão e reconexão. Capturas com neve aberta.
+- `node smart-house-test/check-effects.cjs`: aprovado.
+- Capturas locais: `.build/feira-1366x768.png`, `.build/feira-1920x1080.png`, `.build/feira-sem-partidas.png`, `.build/casa-1366x768.png`, `.build/casa-1920x1080.png`, `.build/casa-390x844.png`.
+- Casinha: alterações de apresentação em CSS; comandos, autenticação e polling de 200 ms preservados. Nenhuma publicação ou validação de hardware realizada nesta etapa.

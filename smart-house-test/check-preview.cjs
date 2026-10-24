@@ -4,6 +4,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const base='http://127.0.0.1:8765';
 async function api(data){const r=await fetch(base+(data?'/control':'/status'),{method:data?'POST':'GET',body:data?new URLSearchParams(data):undefined});return r}
 async function main(){
+ await api({action:'all',value:'on'});
  for(const value of ['breathing','color_wave','chase','blink','invalid'])assert.equal((await api({action:'mode',value})).status,400);
  for(const value of ['manual','hsl_cycle','snow','halloween','christmas'])assert.equal((await api({action:'mode',value})).status,200);
  assert.equal((await fetch(base+'/control',{method:'POST',headers:{Origin:'http://untrusted.invalid'},body:new URLSearchParams({action:'all',value:'off'})})).status,403);
@@ -30,13 +31,28 @@ async function main(){
     assert(sizes.sw<=width && sizes.sh<=height,JSON.stringify({width,height,mode,sizes}));assert.deepEqual(sizes.off,[]);
     assert.equal((await(await api()).json()).mode,mode);
    }
+   await evaluate("document.querySelector('[data-mode=snow]').click()");await pause(250);
    fs.mkdirSync('.build',{recursive:true});fs.writeFileSync(`.build/casa-${width}x${height}.png`,Buffer.from((await cdp('Page.captureScreenshot',{format:'png'})).data,'base64'));
   }
   await evaluate("document.querySelector('[data-room=CENTRAL]').click()");await pause(300);
   assert.equal((await(await api()).json()).floors[1].on,false);
   await evaluate("{const c=document.querySelector('[data-color=TERREO]');c.value='#123456';c.dispatchEvent(new Event('change'))}");await pause(300);
   const state=await(await api()).json();assert.equal(state.mode,'manual');assert.equal(state.floors[2].color,'#123456');assert.equal(state.floors[1].on,false);
-  await cdp('Browser.close');console.log('PASS: five modes, removed API modes, floor/color controls, 15 viewport/mode combinations; screenshots in .build.');
+  for(const value of ['off','on']){
+   await evaluate(`document.querySelector('[data-all=${value}]').click()`);await pause(250);
+   assert((await(await api()).json()).floors.every(f=>f.on===(value==='on')));
+  }
+  for(const [id,value] of [['brightness',42],['speed',5],['density',8]]){
+   await evaluate(`{const e=document.getElementById('${id}');e.value=${value};e.dispatchEvent(new Event('change'))}`);await pause(250);
+  }
+  const adjusted=await(await api()).json();assert.equal(adjusted.brightness,107);assert.equal(adjusted.snow_speed,5);assert.equal(adjusted.snow_density,8);
+  await cdp('Network.enable');
+  await cdp('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});await pause(500);
+  assert.equal(await evaluate("document.querySelector('#connection').dataset.online"),'false');
+  assert.equal(await evaluate("[...document.querySelectorAll('button,input')].every(e=>e.disabled)"),true);
+  await cdp('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});await pause(500);
+  assert.equal(await evaluate("document.querySelector('#connection').dataset.online"),'true');
+  await cdp('Browser.close');console.log('PASS: five modes, removed API modes, floor/color/power/brightness/snow controls, disconnect/reconnect, 15 viewport/mode combinations; screenshots in .build.');
  }finally{socket?.close();edge.kill()}
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

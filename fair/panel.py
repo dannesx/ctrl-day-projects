@@ -1,6 +1,6 @@
 """Painel público da feira. ESC sai; F2 abre organização."""
 import argparse
-from collections import Counter
+from charts import SessionCharts
 import json
 import logging
 import os
@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--windowed', action='store_true')
     parser.add_argument('--frames', type=int, default=0, help=argparse.SUPPRESS)
     parser.add_argument('--screenshot', help=argparse.SUPPRESS)
+    parser.add_argument('--size', default='1366x768', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.screenshot and not args.demo:
         parser.error('--screenshot exige --demo; imagens da câmera não são gravadas')
@@ -43,7 +44,7 @@ def main():
     camera = None if args.demo else Camera(config['camera'], root/'gesture_recognizer.task')
     import pygame as pg
     pg.init()
-    screen = pg.display.set_mode((1366,768), pg.RESIZABLE if args.windowed else pg.FULLSCREEN)
+    screen = pg.display.set_mode(tuple(map(int, args.size.split('x'))), pg.RESIZABLE if args.windowed else pg.FULLSCREEN)
     pg.display.set_caption('Feira · Jokenpo e jogo da velha')
     canvas = pg.Surface((1366,768))
     fonts = {n: pg.font.SysFont('Segoe UI', n) for n in (16,18,20,24,32)}
@@ -52,6 +53,7 @@ def main():
     states, ports = {}, []
     demo_boot, demo_id, next_demo = uuid.uuid4().hex, 0, 0
     history = {p: store.results(p) for p in PROJECTS}
+    charts = SessionCharts()
     frame_count = 0
     previous_observation = 0
 
@@ -60,17 +62,6 @@ def main():
 
     def rect(x,y,w,h,color='#1c2a3d'):
         pg.draw.rect(canvas,color,(x,y,w,h),border_radius=12)
-
-    def kpis(rows,x,y,rate=False):
-        counts=Counter(r['outcome'] for r in rows)
-        parts=[('Partidas',len(rows)),('Vitórias',counts['win']),('Empates',counts['draw']),('Derrotas',counts['loss'])]
-        if rate:
-            parts.append(('Taxa vitória',f"{counts['win']/len(rows):.0%}" if rows else '—'))
-        width=620/len(parts)
-        for i,(title,value) in enumerate(parts):
-            rect(x+i*width,y,width-8,70)
-            label(title,x+i*width+9,y+8,16)
-            label(value,x+i*width+9,y+30,24,'#5ce1b7')
 
     try:
         while running:
@@ -159,23 +150,9 @@ def main():
             label(j.get('result',''),40,320,20,'#5ce1b7')
             if phase=='result' and all(j.get(k) in (0,1,2) for k in ('player','computer')):
                 label(f"Você: {NAMES[j['player']]}  /  ESP: {NAMES[j['computer']]}",40,288,18)
-            kpis(history[PROJECTS[0]],28,366,True)
-            rows=history[PROJECTS[0]]
-            label('Últimas 30 · jogador ● verde / ESP ● laranja',28,450,18)
-            for option,name in enumerate(NAMES):
-                y=490+option*38
-                label(name,28,y-10,16)
-                pg.draw.line(canvas,'#334257',(100,y),(640,y))
-                for i,row in enumerate(rows[-30:]):
-                    x=110+i*18
-                    if row['player']==option: pg.draw.circle(canvas,'#5ce1b7',(x,y-4),4)
-                    if row['computer']==option: pg.draw.circle(canvas,'#ffbd7a',(x,y+5),4)
-            label('Frequência acumulada / desempenho por escolha',28,608,18)
-            for option,name in enumerate(NAMES):
-                chosen=[r for r in rows if r['player']==option]
-                wins=sum(r['outcome']=='win' for r in chosen)
-                rate=f'{wins/len(chosen):.0%}' if chosen else '—'
-                label(f'{name}: {len(chosen)} tentativas · {wins} vitórias · {rate}',28,638+option*27,18)
+            charts_images = charts.images(store.session, history[PROJECTS[0]], history[PROJECTS[1]])
+            for chart, position in zip(charts_images, ((28,366),(398,366),(710,366))):
+                canvas.blit(chart, position)
             training=t.get('training',False)
             mode='TREINANDO' if training else 'Última partida treinada' if t.get('last_trained') else 'TREINADO' if t.get('mode')=='trained' else 'ALEATÓRIO'
             ms=t.get('remaining_ms',0)
@@ -192,19 +169,6 @@ def main():
                 label(board[cell] if len(board)==9 and board[cell]!='-' else '·',x+19,y+8,24)
             label('Treinamento em andamento' if training else {'X':'Vitória do jogador','O':'Vitória do ESP','D':'Empate','-':'Partida em andamento'}.get(t.get('result'),'Aguardando placa'),918,192,20)
             label('Controles nos botões físicos',918,232,18,'#a5b6ca')
-            kpis(history[PROJECTS[1]],710,366)
-            label('Resultados dos visitantes por modo',710,454,24)
-            for i,(mode,name) in enumerate((('random','Aleatório'),('trained','Treinado'))):
-                group=[r for r in history[PROJECTS[1]] if r['mode']==mode]
-                counts=Counter(r['outcome'] for r in group)
-                x=710+i*315
-                label(f'{name} · {len(group)} partidas',x,500,20)
-                for k,(outcome,title,color) in enumerate((('win','Vitórias','#5ce1b7'),('draw','Empates','#9eb9f5'),('loss','Derrotas','#ffbd7a'))):
-                    value=counts[outcome]; ratio=value/len(group) if group else 0
-                    y=544+k*54
-                    pg.draw.rect(canvas,'#25364c',(x,y,280,14),border_radius=4)
-                    if value: pg.draw.rect(canvas,color,(x,y,int(280*ratio),14),border_radius=4)
-                    label(f'{title}: {value} ({ratio:.0%})' if group else f'{title}: 0 (—)',x,y+17,16)
             if organizing:
                 rect(260,170,850,420,'#2c3c53')
                 label('Organização · F2 fecha',290,190,32)
@@ -220,7 +184,7 @@ def main():
             if args.frames and frame_count>=args.frames: running=False
     finally:
         if args.screenshot:
-            pg.image.save(canvas,args.screenshot)
+            pg.image.save(screen,args.screenshot)
         if camera: camera.close()
         if hub: hub.close()
         store.close(); pg.quit()
