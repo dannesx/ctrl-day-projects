@@ -6,7 +6,7 @@
 #include <Update.h>
 #include "wifi_config.h"
 
-constexpr const char* FIRMWARE_VERSION = "smart-house-fair-9";
+constexpr const char* FIRMWARE_VERSION = "smart-house-voice-12";
 class OtaWebServer : public WebServer {
  public:
   OtaWebServer() : WebServer(80) {}
@@ -26,7 +26,7 @@ const char UPDATE_PAGE[] PROGMEM = R"HTML(<!doctype html>
 body{font:17px system-ui;background:#f3f5f7;color:#17232c;max-width:600px;margin:60px auto;padding:24px}
 main{background:white;padding:28px;border-radius:18px}h1{margin-top:0}input,button{font:inherit;margin:12px 0;max-width:100%}
 button{background:#146a54;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer}
-</style><main><h1>Smart House</h1><p>30 LEDs nos tres andares (D14/D12/D13), com ciclo de cores HSL sincronizado a 100% de brilho. Uma volta a cada 8 segundos.</p>
+</style><main><h1>Smart House</h1><p>30 LEDs nos tres andares (D14/D12/D13), com ciclo de cores HSL sincronizado com brilho limitado a 75%. Uma volta a cada 8 segundos.</p>
 <h2>Atualizar programa</h2><p>Escolha o arquivo de firmware <b>.ino.bin</b>. Mantenha a alimenta&ccedil;&atilde;o ligada at&eacute; concluir.</p>
 <form method="post" action="/update" enctype="multipart/form-data"><input type="file" name="firmware" accept=".bin" required><br>
 <button type="submit">Enviar atualiza&ccedil;&atilde;o</button></form>
@@ -85,6 +85,7 @@ void otaSetup() {
       otaServer.send(200, "text/plain; charset=utf-8", "Atualizacao concluida. O ESP32 vai reiniciar; abra a pagina novamente em alguns segundos.");
       rebootAt = millis() + 1000;
     }
+    if (!rebootAt) audioResume();
     uploadAllowed = false;
     uploadComplete = false;
   }, []() {
@@ -98,6 +99,7 @@ void otaSetup() {
       if (origin.length() && origin != String("http://") + otaServer.header("Host")) return;
       if (!upload.filename.endsWith(".bin")) return;
       uploadAllowed = true;
+      audioPause();
       if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) Update.printError(Serial);
     } else if (uploadAllowed && upload.status == UPLOAD_FILE_WRITE) {
       if (!Update.hasError() && Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
@@ -108,7 +110,7 @@ void otaSetup() {
       if (!uploadComplete) Update.printError(Serial);
       else Serial.printf("OTA concluido: %u bytes.\n", static_cast<unsigned>(upload.totalSize));
     } else if (upload.status == UPLOAD_FILE_ABORTED) {
-      if (uploadAllowed) Update.abort();
+      if (uploadAllowed) { Update.abort(); audioResume(); }
       uploadAllowed = false;
       uploadComplete = false;
     }

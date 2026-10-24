@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.74.0"
+  },
+  "private": true,
+  "scripts": {
+    "audio:generate": "node --env-file=.env.local smart-house-test/generate_audio.mjs"
+  }
+}

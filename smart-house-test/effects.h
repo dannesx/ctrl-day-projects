@@ -11,7 +11,8 @@ typedef int int32_t;
 // Portable effect engine, compiled unchanged for ESP32 and the local preview.
 namespace House {
 struct RGB { uint8_t r,g,b; };
-enum Mode { Manual, Cycle, Snow, Halloween, Christmas };
+enum Mode { Manual, Cycle, Snow, Halloween, Christmas, Matrix };
+constexpr int LEDS_PER_FLOOR = 10;
 struct Config {
   Mode mode=Cycle;
   bool on[3]={true,true,true};
@@ -35,7 +36,7 @@ struct Engine {
  uint8_t eventFloor=0,flashes=0;
  bool blackout=false;
  uint32_t random(){seed=hash(seed+0x9e3779b9UL);return seed;}
- RGB pixels[3][12]={};
+ RGB pixels[3][LEDS_PER_FLOOR]={};
  void render(uint32_t now,const Config& cfg){
    if(cfg.mode==Halloween && (!nextEvent || int32_t(now-nextEvent)>=0)){
      eventStart=now; eventFloor=random()%3; flashes=1+random()%5;
@@ -43,7 +44,7 @@ struct Engine {
      nextEvent=now+flashes*flashMs*2+400+random()%4500;
    }
    for(int f=0;f<3;++f){
-     int count=f==0?12:9;
+     int count=LEDS_PER_FLOOR;
      for(int p=0;p<count;++p){
        RGB c=cfg.colors[f];
        if(cfg.mode==Cycle) c=hue((now%8000)*360/8000);
@@ -70,6 +71,21 @@ struct Engine {
          uint32_t elapsed=now-eventStart;
          if(f==eventFloor && elapsed<uint32_t(flashes)*flashMs*2){
            c=blackout || (elapsed/flashMs)%2 ? RGB{0,0,0}:RGB{255,210,155};
+         }
+       }
+       if(cfg.mode==Matrix){
+         // One horizontal stream per floor, with independent timing and a dark gap.
+         const uint32_t stepMs=110+f*35;
+         const uint32_t tick=now/stepMs+f*7;
+         const int head=tick%(count+7);
+         const int behind=head-p;
+         c={0,0,0};
+         if(behind==0) c={155,255,185};
+         else if(behind>0 && behind<=5){
+           const uint8_t trail[]={0,210,130,72,34,12};
+           // Subtle digital flicker, always dimmer than the leading pixel.
+           const uint8_t flicker=185+hash(now/90+p*43+f*101)%71;
+           c=scale({0,trail[behind],3},flicker);
          }
        }
        if(cfg.mode==Christmas){

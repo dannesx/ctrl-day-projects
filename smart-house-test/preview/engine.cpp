@@ -10,7 +10,7 @@ void floor_settings(int floor,int on,int color){
 }
 void render(unsigned now){engine.render(now,cfg);}
 int pixel(int floor,int index){
- if(floor<0 || floor>2 || index<0 || index>=(floor==0?12:9))return 0;
+ if(floor<0 || floor>2 || index<0 || index>=House::LEDS_PER_FLOOR)return 0;
  auto c=engine.pixels[floor][index];return (int(c.r)<<16)|(int(c.g)<<8)|c.b;
 }
 }

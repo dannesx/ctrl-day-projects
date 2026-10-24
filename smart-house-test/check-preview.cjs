@@ -1,12 +1,14 @@
 // Local preview integration and viewport checks; no hardware or credentials.
 const fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process'),assert=require('node:assert/strict');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
-const base='http://127.0.0.1:8765';
+const base=process.env.PREVIEW_URL||'http://127.0.0.1:8765';
 async function api(data){const r=await fetch(base+(data?'/control':'/status'),{method:data?'POST':'GET',body:data?new URLSearchParams(data):undefined});return r}
 async function main(){
+ await api({action:'audio',volume:'25',muted:'false'});
+ await api({action:'brightness',value:'100'});
  await api({action:'all',value:'on'});
  for(const value of ['breathing','color_wave','chase','blink','invalid'])assert.equal((await api({action:'mode',value})).status,400);
- for(const value of ['manual','hsl_cycle','snow','halloween','christmas'])assert.equal((await api({action:'mode',value})).status,200);
+ for(const value of ['manual','hsl_cycle','snow','halloween','christmas','matrix'])assert.equal((await api({action:'mode',value})).status,200);
  assert.equal((await fetch(base+'/control',{method:'POST',headers:{Origin:'http://untrusted.invalid'},body:new URLSearchParams({action:'all',value:'off'})})).status,403);
  const edgePath=process.env.EDGE_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
  const edge=spawn(edgePath,['--headless','--disable-gpu','--no-first-run','--remote-debugging-port=9341','--user-data-dir='+path.resolve('.build/edge-fair-preview'),'about:blank'],{windowsHide:true,stdio:'ignore'});
@@ -25,7 +27,7 @@ async function main(){
   assert.equal(await evaluate("document.querySelectorAll('.room').length"),3);
   for(const [width,height] of [[1366,768],[1920,1080],[390,844]]){
    await cdp('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<700});
-   for(const mode of ['manual','hsl_cycle','snow','halloween','christmas']){
+   for(const mode of ['manual','hsl_cycle','snow','halloween','christmas','matrix']){
     await evaluate(`document.querySelector('[data-mode=${mode}]').click()`);await pause(250);
     const sizes=await evaluate(`({w:innerWidth,h:innerHeight,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,off:[...document.querySelectorAll('button,input,a')].filter(e=>e.getClientRects().length).filter(e=>{const r=e.getBoundingClientRect();return r.left<0||r.right>innerWidth+1||r.top<0||r.bottom>innerHeight+1}).map(e=>e.outerHTML)})`);
     assert(sizes.sw<=width && sizes.sh<=height,JSON.stringify({width,height,mode,sizes}));assert.deepEqual(sizes.off,[]);
@@ -45,14 +47,33 @@ async function main(){
   for(const [id,value] of [['brightness',42],['speed',5],['density',8]]){
    await evaluate(`{const e=document.getElementById('${id}');e.value=${value};e.dispatchEvent(new Event('change'))}`);await pause(250);
   }
-  const adjusted=await(await api()).json();assert.equal(adjusted.brightness,107);assert.equal(adjusted.snow_speed,5);assert.equal(adjusted.snow_density,8);
+  const adjusted=await(await api()).json();assert.equal(adjusted.brightness,80);assert.equal(adjusted.brightness_percent,42);assert.equal(adjusted.snow_speed,5);assert.equal(adjusted.snow_density,8);
+  await evaluate("{const e=document.querySelector('#volume');e.value=35;e.dispatchEvent(new Event('change'))}");await pause(250);
+  assert.equal((await(await api()).json()).audio.volume,35);
+  await evaluate("document.querySelector('#muted').click()");await pause(250);
+  assert.equal((await(await api()).json()).audio.muted,true);
+  for(const value of [0,50,100]){const r=await(await api({action:'brightness',value:String(value)})).json();assert.equal(r.brightness,Math.round(value*191/100));assert.equal(r.brightness_percent,value)}
+  await cdp('Page.reload');await pause(600);assert.equal(await evaluate("document.querySelector('#brightness').value"),'100');
   await cdp('Network.enable');
   await cdp('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});await pause(500);
   assert.equal(await evaluate("document.querySelector('#connection').dataset.online"),'false');
   assert.equal(await evaluate("[...document.querySelectorAll('button,input')].every(e=>e.disabled)"),true);
   await cdp('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});await pause(500);
   assert.equal(await evaluate("document.querySelector('#connection').dataset.online"),'true');
-  await cdp('Browser.close');console.log('PASS: five modes, removed API modes, floor/color/power/brightness/snow controls, disconnect/reconnect, 15 viewport/mode combinations; screenshots in .build.');
+  await cdp('Page.navigate',{url:base+'/audio'});
+  for(let i=0;i<30;i++){await pause(100);if(await evaluate("document.querySelectorAll('#list li').length===15"))break}
+  assert.equal(await evaluate("document.querySelectorAll('#list li').length"),15);
+  await evaluate(`(async()=>{
+   if(!document.querySelector('#prepare').hidden){await fetch('/audio/initialize',{method:'POST',body:new URLSearchParams({confirm:'ERASE_AUDIO_DATA'})});await refresh()}
+   const b=new Uint8Array(76),v=new DataView(b.buffer),text=(offset,s)=>b.set(new TextEncoder().encode(s),offset);
+   text(0,'RIFF');v.setUint32(4,68,true);text(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+   v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);text(36,'data');v.setUint32(40,32,true);
+   const dt=new DataTransfer();dt.items.add(new File([b],'inicio.wav',{type:'audio/wav'}));document.querySelector('#files').files=dt.files;document.querySelector('#upload').requestSubmit();
+  })()`);
+  for(let i=0;i<30;i++){await pause(100);if(await evaluate("document.querySelector('#result').textContent.includes('enviado.')"))break}
+  assert.equal(await evaluate("document.querySelector('#result').textContent.includes('inicio.wav: enviado.')"),true);
+  assert.equal((await(await api()).json()).audio.files[0].size,76);
+  await cdp('Browser.close');console.log('PASS: six modes, lighting/voice controls, brightness reload, WAV upload page, disconnect/reconnect, 18 viewport/mode combinations; screenshots in .build.');
  }finally{socket?.close();edge.kill()}
 }
 main().catch(e=>{console.error(e);process.exitCode=1});

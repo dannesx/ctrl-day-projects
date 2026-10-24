@@ -1,0 +1,105 @@
+{
+  "voiceId": "EXAVITQu4vr4xnSDxMaL",
+  "voice": "Sarah - Mature, Reassuring, Confident",
+  "modelId": "eleven_v4",
+  "language": "pt-BR",
+  "files": [
+    {
+      "filename": "inicio.wav",
+      "text": "Casa inteligente pronta.",
+      "bytes": 66604,
+      "seconds": 2.08,
+      "inputText": "[strong Brazilian Portuguese accent] Casa inteligente pronta.",
+      "voiceSettings": {
+        "stability": 0.7,
+        "similarityBoost": 0.4
+      },
+      "regeneratedAt": "2026-10-24T09:55:37.975Z"
+    },
+    {
+      "filename": "tudo_on.wav",
+      "text": "Todas as luzes acesas.",
+      "bytes": 66604,
+      "seconds": 2.08
+    },
+    {
+      "filename": "tudo_off.wav",
+      "text": "Todas as luzes apagadas.",
+      "bytes": 69164,
+      "seconds": 2.16
+    },
+    {
+      "filename": "superior_on.wav",
+      "text": "Luzes do andar superior acesas.",
+      "bytes": 89644,
+      "seconds": 2.8
+    },
+    {
+      "filename": "superior_off.wav",
+      "text": "Luzes do andar superior apagadas.",
+      "bytes": 87084,
+      "seconds": 2.72
+    },
+    {
+      "filename": "central_on.wav",
+      "text": "Luzes do andar central acesas.",
+      "bytes": 84524,
+      "seconds": 2.64
+    },
+    {
+      "filename": "central_off.wav",
+      "text": "Luzes do andar central apagadas.",
+      "bytes": 84524,
+      "seconds": 2.64
+    },
+    {
+      "filename": "terreo_on.wav",
+      "text": "Luzes do térreo acesas.",
+      "bytes": 69164,
+      "seconds": 2.16
+    },
+    {
+      "filename": "terreo_off.wav",
+      "text": "Luzes do térreo apagadas.",
+      "bytes": 74284,
+      "seconds": 2.32
+    },
+    {
+      "filename": "manual.wav",
+      "text": "Modo cores fixas ativado.",
+      "bytes": 69164,
+      "seconds": 2.16
+    },
+    {
+      "filename": "ciclo.wav",
+      "text": "Ciclo de cores ativado.",
+      "bytes": 61484,
+      "seconds": 1.92
+    },
+    {
+      "filename": "neve.wav",
+      "text": "Modo neve ativado.",
+      "bytes": 56364,
+      "seconds": 1.76
+    },
+    {
+      "filename": "halloween.wav",
+      "text": "Modo Halloween ativado.",
+      "bytes": 66604,
+      "seconds": 2.08
+    },
+    {
+      "filename": "natal.wav",
+      "text": "Modo Natal ativado.",
+      "bytes": 64044,
+      "seconds": 2
+    },
+    {
+      "filename": "matrix.wav",
+      "text": "Modo Matrix ativado.",
+      "bytes": 64044,
+      "seconds": 2
+    }
+  ],
+  "totalBytes": 1073300
+}

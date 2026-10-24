@@ -15,7 +15,7 @@ String controlState() {
     if (i) state += ',';
     state += String("{\"id\":\"") + level.id + "\",\"on\":" + (level.on ? "true" : "false") +
       ",\"color\":\"" + color + "\",\"leds\":" + String(level.count) + ",\"rendered_color\":\"" + rendered + "\"";
-    if (lightingMode == "snow" || lightingMode == "halloween" || lightingMode == "christmas") {
+    if (lightingMode == "snow" || lightingMode == "halloween" || lightingMode == "christmas" || lightingMode == "matrix") {
       state += ",\"pixels\":[";
       for (uint8_t pixel = 0; pixel < level.count; ++pixel) {
         const CRGB value = level.strip[pixel];
@@ -28,7 +28,7 @@ String controlState() {
     }
     state += '}';
   }
-  return state + "]}";
+  return state + "],\"brightness_percent\":" + String(brightnessPercent) + ",\"audio\":" + audioState() + "}";
 }
 
 bool decimalValue(const String& text, uint16_t maximum, uint16_t& value) {
@@ -57,13 +57,28 @@ void controlSetup() {
     }
     auto invalid = []() { otaServer.send(400, "text/plain", "Comando invalido"); };
     const String action = otaServer.arg("action");
-    if (action == "brightness") {
+    int announcement = -1;
+    if (action == "audio") {
+      uint16_t volume = audioVolume.load();
+      bool muted = audioMuted.load();
+      if ((!otaServer.hasArg("volume") && !otaServer.hasArg("muted")) ||
+          (otaServer.hasArg("volume") && !decimalValue(otaServer.arg("volume"), 100, volume))) { invalid(); return; }
+      if (otaServer.hasArg("muted")) {
+        const String value = otaServer.arg("muted");
+        if (value != "true" && value != "false") { invalid(); return; }
+        muted = value == "true";
+      }
+      audioVolume = volume; audioMuted = muted;
+      if (muted || !volume) audioStop();
+    } else if (action == "brightness") {
       uint16_t value;
       if (!decimalValue(otaServer.arg("value"), 100, value)) { invalid(); return; }
-      FastLED.setBrightness((value * 255 + 50) / 100);
+      brightnessPercent = value;
+      FastLED.setBrightness((value * MAX_LED_BRIGHTNESS + 50) / 100);
     } else if (action == "mode") {
       const String value = otaServer.arg("value");
-      if (value != "manual" && value != "hsl_cycle" && value != "snow" && value != "halloween" && value != "christmas") { invalid(); return; }
+      if (value != "manual" && value != "hsl_cycle" && value != "snow" && value != "halloween" && value != "christmas" && value != "matrix") { invalid(); return; }
+      if (lightingMode != value) announcement = value == "manual" ? 9 : value == "hsl_cycle" ? 10 : value == "snow" ? 11 : value == "halloween" ? 12 : value == "christmas" ? 13 : 14;
       lightingMode = value;
     } else if (action == "snow") {
       uint16_t speed = snowSpeed, density = snowDensity;
@@ -75,7 +90,10 @@ void controlSetup() {
     } else if (action == "all") {
       const String value = otaServer.arg("value");
       if (value != "on" && value != "off") { invalid(); return; }
-      for (auto& level : floors) level.on = value == "on";
+      for (auto& level : floors) {
+        if (level.on != (value == "on")) announcement = value == "on" ? 1 : 2;
+        level.on = value == "on";
+      }
     } else if (action == "floor") {
       Floor* target = nullptr;
       for (auto& level : floors) if (otaServer.arg("id") == level.id) target = &level;
@@ -83,6 +101,7 @@ void controlSetup() {
       if (otaServer.hasArg("on")) {
         const String value = otaServer.arg("on");
         if (value != "true" && value != "false") { invalid(); return; }
+        if (target->on != (value == "true")) announcement = 3 + 2 * (target - floors) + (value == "true" ? 0 : 1);
         target->on = value == "true";
       } else {
         const String color = otaServer.arg("color");
@@ -93,6 +112,7 @@ void controlSetup() {
         lightingMode = "manual";
       }
     } else { invalid(); return; }
+    if (announcement >= 0) audioSay(announcement);
     renderLights(millis());
     otaServer.sendHeader("Cache-Control", "no-store");
     otaServer.send(200, "application/json", controlState());

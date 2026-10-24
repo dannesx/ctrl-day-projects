@@ -12,10 +12,13 @@ async function main(){
  assert.equal((await fetch(base+'/status')).status,401);
  assert.equal((await fetch(base+'/control',{method:'POST',body:new URLSearchParams({action:'all',value:'off'})})).status,401);
  initial=await(await api()).json();
+ assert.equal((await fetch(base+'/audio/upload',{method:'POST'})).status,401);
+ assert.equal((await fetch(base+'/audio/initialize',{method:'POST'})).status,401);
+ await api({action:'audio',muted:'true'});
  assert.equal((await api({action:'all',value:'off'},{Origin:'http://external.invalid'})).status,403);
  for(const value of ['breathing','color_wave','chase','blink','invalid'])assert.equal((await api({action:'mode',value})).status,400);
  for(const data of [{action:'brightness',value:'101'},{action:'floor',id:'TERREO',color:'#zz0000'},{action:'floor',id:'unknown',on:'true'}])assert.equal((await api(data)).status,400);
- for(const value of ['manual','hsl_cycle','snow','halloween','christmas']){
+ for(const value of ['manual','hsl_cycle','snow','halloween','christmas','matrix']){
   assert.equal((await api({action:'mode',value})).status,200);
   const state=await(await api({action:'floor',id:'CENTRAL',on:'false'})).json();
   assert.equal(state.mode,value);assert.equal(state.floors[1].on,false);
@@ -25,15 +28,21 @@ async function main(){
  const state=await(await api({action:'floor',id:'TERREO',color:'#123456'})).json();
  assert.equal(state.mode,'manual');assert.equal(state.floors[2].color,'#123456');
  assert.equal((await fetch(base+'/update',{headers:{Authorization:authorization}})).status,200);
- console.log('PASS: authentication, origin, five modes, removed modes, disabled floor, color and OTA page.');
+ assert.equal((await fetch(base+'/audio',{headers:{Authorization:authorization}})).status,200);
+ for(const value of [0,50,100]){
+  const state=await(await api({action:'brightness',value:String(value)})).json();
+  assert.equal(state.brightness,Math.round(value*191/100));assert.equal(state.brightness_percent,value);
+ }
+ console.log('PASS: authentication, origin, six modes, removed modes, disabled floor, color and OTA page.');
 }
 main().catch(e=>{console.error(e.message);process.exitCode=1}).finally(async()=>{
  if(!initial)return;
  try{
   for(const f of initial.floors)await api({action:'floor',id:f.id,color:f.color});
   for(const f of initial.floors)await api({action:'floor',id:f.id,on:String(f.on)});
-  await api({action:'brightness',value:String(Math.round(initial.brightness*100/255))});
+  await api({action:'brightness',value:String(initial.brightness_percent)});
   await api({action:'snow',speed:String(initial.snow_speed),density:String(initial.snow_density)});
   await api({action:'mode',value:initial.mode});
+  await api({action:'audio',volume:String(initial.audio.volume),muted:String(initial.audio.muted)});
  }catch(e){console.error('Falha ao restaurar luzes: '+e.message);process.exitCode=1}
 });

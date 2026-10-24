@@ -8,10 +8,11 @@ import json
 from pathlib import Path
 import subprocess
 import time
+from audio_preview import AudioPreview
 from urllib.parse import parse_qs
 
 ROOT=Path(__file__).resolve().parent
-MODES=('manual','hsl_cycle','snow','halloween','christmas')
+MODES=('manual','hsl_cycle','snow','halloween','christmas','matrix')
 
 
 def main():
@@ -20,8 +21,9 @@ def main():
     parser.add_argument('--port',type=int,default=8765)
     args=parser.parse_args()
     engine=subprocess.Popen([args.node,str(ROOT/'preview_engine.cjs')],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
-    state={'mode':'hsl_cycle','brightness':255,'snow_speed':3,'snow_density':4,
-           'floors':[{'id':name,'on':True,'color':'#ffa04b','leds':12 if i==0 else 9}
+    audio=AudioPreview()
+    state={'mode':'hsl_cycle','brightness':191,'brightness_percent':100,'audio':audio.state,'snow_speed':3,'snow_density':4,
+           'floors':[{'id':name,'on':True,'color':'#ffa04b','leds':10}
                      for i,name in enumerate(('SUPERIOR','CENTRAL','TERREO'))]}
     start=time.monotonic()
 
@@ -45,9 +47,15 @@ def main():
                 text=(ROOT/'web_ui.h').read_text(encoding='utf8').split('R"HTML(',1)[1].split(')HTML";',1)[0]
                 self.send(200,text,'text/html; charset=utf-8')
             elif self.path=='/status': self.snapshot()
+            elif self.path=='/audio':
+                text=(ROOT/'audio_web.h').read_text(encoding='utf8').split('R"HTML(',1)[1].split(')HTML";',1)[0]
+                self.send(200,text,'text/html; charset=utf-8')
             else:self.send(404,'{}')
 
         def do_POST(self):
+            if self.path in ('/audio/upload','/audio/initialize'):
+                code,message=audio.request(self.path,self.headers,self.rfile)
+                self.send(code,message,'text/plain; charset=utf-8');return
             if self.path!='/control':self.send(404,'{}');return
             if self.headers.get('Origin') not in (None,'http://'+self.headers.get('Host','')):
                 self.send(403,'{}');return
@@ -56,11 +64,15 @@ def main():
                 if length>4096:raise ValueError()
                 data={k:v[0] for k,v in parse_qs(self.rfile.read(length).decode()).items()}
                 action=data['action']
+                before=json.loads(json.dumps(state))
                 if action=='mode':
                     if data['value'] not in MODES:raise ValueError()
                     state['mode']=data['value']
                 elif action=='brightness':
-                    n=int(data['value']);assert 0<=n<=100;state['brightness']=(n*255+50)//100
+                    assert data['value'].isascii() and data['value'].isdigit()
+                    n=int(data['value']);assert 0<=n<=100;state['brightness']=(n*191+50)//100;state['brightness_percent']=n
+                elif action=='audio':
+                    audio.control(data)
                 elif action=='all':
                     assert data['value'] in ('on','off')
                     for floor in state['floors']:floor['on']=data['value']=='on'
@@ -80,6 +92,7 @@ def main():
                     assert updates;state.update(updates)
                 else:raise ValueError()
             except (ValueError,KeyError,AssertionError,StopIteration):self.send(400,'{}');return
+            audio.announce(action,data,before,state)
             self.snapshot()
 
         def log_message(self,*args):pass

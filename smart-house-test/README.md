@@ -1,6 +1,10 @@
+# Versão atual: luzes e voz
+
+O firmware atual inclui a interface web, limite físico de brilho em 75% e suporte ao MAX98357A. Consulte [WEB.md](WEB.md) e [AUDIO.md](AUDIO.md) para uso, ligações e envio das gravações. O texto abaixo registra as etapas anteriores do teste; valores de 100% físico se referem às versões antigas.
+
 # Controle de luzes da casa
 
-**Versão atual: controle pelo navegador para a feira.** Consulte [o painel web, prévia local e comandos](WEB.md) e [o guia de operação](../GUIA-FEIRA.md). Cinco modos: cores fixas, ciclo de cores, Neve, Halloween e Natal. O histórico abaixo descreve as etapas anteriores de teste.
+**Versão atual: controle pelo navegador para a feira.** Consulte [o painel web, prévia local e comandos](WEB.md) e [o guia de operação](../GUIA-FEIRA.md). Seis modos: cores fixas, ciclo de cores, Neve, Halloween, Natal e Matrix. A configuração atual usa 10 LEDs por andar (3×10), nos GPIOs 14, 12 e 13. O histórico abaixo descreve as etapas anteriores de teste.
 
 Acende os 30 LEDs dos tr?s andares: 12 em D14 / GPIO14, 9 em D12 / GPIO12 e 9 em D13 / GPIO13. Todos mostram a mesma cor em um ciclo cont?nuo de matiz HSL de **8 segundos**, com brilho global **255/255 (100%)**.
 
