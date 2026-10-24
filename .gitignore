@@ -10,3 +10,4 @@ wifi_config.h
 .codex/
 .aws/
 .impeccable/
+.build/

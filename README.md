@@ -1,5 +1,8 @@
 # Ctrl Day Projects
 
+- **smart-house/**: iluminação de seis cômodos com ESP32 e WS2812B, controlada pela serial. Veja [as instruções](smart-house/README.md).
+- **smart-house-test/**: controle web de três andares pelo ESP32, com matiz, brilho, efeitos e atualização por Wi-Fi. Veja [o painel e os comandos](smart-house-test/WEB.md).
+
 Projetos com ESP32, Arduino e interfaces para experimentos de eletrônica e robótica.
 
 - **clock/**: relógio com sincronização NTP e fuso UTC−3.

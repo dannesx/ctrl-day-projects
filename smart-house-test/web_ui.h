@@ -1,0 +1,66 @@
+#pragma once
+const char CONTROL_PAGE[] PROGMEM = R"HTML(<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Casinha · Controle</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#edf3ed;background:#101612;accent-color:#c7f58a}*{box-sizing:border-box}body{margin:0}main{max-width:1080px;margin:auto;padding:40px 24px}header,.row,.room-top{display:flex;justify-content:space-between;align-items:center;gap:16px}.eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#b4c6b6}h1{font-size:clamp(32px,5vw,52px);letter-spacing:-2px;margin:10px 0}p{color:#a6b8a9;line-height:1.6}.status{font-size:12px;padding:10px 14px;border:1px solid #405644;border-radius:30px;white-space:nowrap}.status[data-online=true]{color:#c7f58a}.dashboard{display:grid;grid-template-columns:1fr 300px;gap:24px;margin-top:32px}.floor{margin-bottom:25px}.floor h2{font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:2px;color:#a6b8a9;margin:0 0 12px}.rooms{display:grid;grid-template-columns:1fr;gap:12px}.room,.panel{border:1px solid #314234;background:#19231c;border-radius:18px;padding:20px}.room{border-top:3px solid var(--light,#405644)}.room[data-on=false]{--light:#405644!important}.room h3{font-size:17px;margin:0}.room small{display:block;color:#a6b8a9;margin:8px 0 22px}.room-bottom{display:flex;align-items:center;gap:10px}.room-bottom label{font-size:12px;color:#b4c6b6}.switch{border:0;background:#425146;min-width:46px;height:28px;border-radius:20px;padding:4px;cursor:pointer}.switch:before{content:'';display:block;width:20px;height:20px;background:#d3ded5;border-radius:50%;transition:transform .2s}.switch[aria-checked=true]{background:#c7f58a}.switch[aria-checked=true]:before{transform:translateX(18px);background:#23351b}.panel{margin-bottom:16px}.panel h2{font-size:16px;margin:0 0 18px}.panel p{font-size:12px;margin-bottom:0}button,select{font:inherit}button.action,select{width:100%;padding:12px;border:1px solid #405644;border-radius:10px;background:#243228;color:#edf3ed;cursor:pointer}.action.primary{background:#c7f58a;color:#203019;border-color:#c7f58a}.actions{display:grid;gap:10px}input[type=range]{width:100%;margin:20px 0 0}.value{font-size:28px;color:#c7f58a}select{margin-top:6px}footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid #314234;padding-top:22px;margin-top:20px;color:#a6b8a9;font-size:12px}a{color:#c7f58a}button:disabled,input:disabled,select:disabled{opacity:.45;cursor:wait}:focus-visible{outline:2px solid #c7f58a;outline-offset:4px}#error{color:#ffb5a8;min-height:22px;margin-bottom:0;font-size:13px}@media(max-width:760px){.dashboard{grid-template-columns:1fr}header{align-items:flex-start}.status{font-size:11px}.room{padding:16px}main{padding:28px 16px}footer{flex-direction:column}}
+/* Compact desktop layout: keep every control within the viewport. */
+@media(min-width:761px){
+ main{height:100vh;height:100dvh;display:flex;flex-direction:column;padding:20px 24px;gap:14px}
+ header{flex-shrink:0}h1{font-size:32px;letter-spacing:-1px;margin:6px 0}header p{font-size:13px;margin:0;line-height:1.4}
+ .dashboard{flex:1;min-height:0;margin-top:0;gap:18px}
+ #floors{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:12px}
+ .floor{margin:0;display:flex;flex-direction:column;min-height:0}.floor h2{font-size:11px;margin-bottom:6px}
+ .rooms{flex:1;min-height:0}.room{padding:12px 16px;border-radius:14px;display:grid;grid-template-columns:1fr auto;align-content:center;column-gap:16px}
+ .room-top{grid-column:1/-1}.room h3{font-size:16px}.room small{margin:8px 0 0;align-self:center;font-size:12px}
+ .room-bottom{margin-top:6px}.room-bottom label{font-size:11px}
+ aside{display:grid;grid-template-rows:auto auto 1fr;gap:12px;min-height:0}.panel{margin:0;padding:14px;border-radius:14px}
+ .panel h2{font-size:14px;margin-bottom:8px}.panel .row h2{margin:0}.panel p{font-size:11px;line-height:1.4;margin-top:8px}
+ .panel label{font-size:12px}.actions{grid-template-columns:1fr 1fr;gap:8px}button.action,select{padding:9px;font-size:13px}
+ .value{font-size:24px}input[type=range]{margin-top:12px}footer{flex-shrink:0;margin:0;padding-top:10px;font-size:11px}
+ #error{min-height:0;margin:0;font-size:12px}#error:empty{display:none}
+}
+@media(min-width:761px) and (max-height:650px){main{padding:12px 24px;gap:10px}h1{font-size:27px}.eyebrow{font-size:10px}.panel{padding:10px 12px}.panel p{margin-top:6px}.room{padding:8px 14px}.floor h2{margin-bottom:4px}#floors,aside{gap:8px}footer{padding-top:8px}}
+.room-bottom{min-width:0;gap:8px}.room-bottom label{white-space:nowrap}.room-bottom input[type=range]{min-width:60px;width:100%;height:8px;margin:0;border-radius:8px;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);appearance:none;-webkit-appearance:none;cursor:pointer}.room-bottom input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid white;border-radius:50%;background:var(--hue,#f00)}.room-bottom input[type=range]::-moz-range-thumb{width:12px;height:12px;border:2px solid white;border-radius:50%;background:var(--hue,#f00)}.room-bottom output{font-size:11px;min-width:30px;text-align:right;color:#c7f58a}
+@media(min-width:761px){.room{grid-template-columns:minmax(0,1fr) minmax(160px,45%)}}
+.snow-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}.snow-controls[hidden]{display:none}.snow-controls label{font-size:11px}.snow-controls input[type=range]{margin-top:6px}
+</style></head><body><main>
+<header><div><div class="eyebrow">Smart House / iluminação</div><h1>Sua casinha, do seu jeito.</h1><p>Três andares. Uma cor para cada momento.</p></div><span id="connection" class="status" role="status">Conectando…</span></header>
+<p id="error" role="alert"></p><div class="dashboard"><section id="floors" aria-label="Andares"></section><aside>
+<section class="panel"><h2>A casa inteira</h2><div class="actions"><button class="action primary" data-all="on">Ligar tudo</button><button class="action" data-all="off">Desligar tudo</button></div></section>
+<section class="panel"><div class="row"><h2>Brilho geral</h2><output id="brightnessValue" class="value" for="brightness">—</output></div><input id="brightness" aria-label="Brilho geral em porcentagem" type="range" min="0" max="100"><p>Intensidade compartilhada por todos os andares.</p></section>
+<section class="panel"><h2>Atmosfera</h2><label for="mode">Modo de iluminação</label><select id="mode"><option value="manual">Cores por andar</option><option value="hsl_cycle">Ciclo de cores · 8 segundos</option><option value="breathing">Respiração · 4 segundos</option><option value="color_wave">Ondas de cores</option><option value="chase">Sequência entre andares</option><option value="snow">Neve</option><option value="halloween">Halloween ? flashes</option><option value="blink">Pisca-pisca</option></select><div id="snowControls" class="snow-controls" hidden><label for="snowSpeed">Velocidade <input id="snowSpeed" type="range" min="1" max="5" value="3"></label><label for="snowDensity">Flocos <input id="snowDensity" type="range" min="1" max="8" value="4"></label></div><p id="modeHint">Escolher uma cor ativa as cores fixas por andar.</p></section>
+</aside></div><footer><span id="summary">Aguardando a casinha</span><a href="/update">Atualizar dispositivo</a></footer>
+</main><script>
+const $=id=>document.getElementById(id);
+const names=['Andar superior','Andar central','Térreo'];
+const ids=['SUPERIOR','CENTRAL','TERREO'];
+const effects={blink:'pisca-pisca',halloween:'Halloween',snow:'neve',manual:'cor fixa',hsl_cycle:'ciclo de cores',breathing:'respiração',color_wave:'ondas de cores',chase:'sequência'};
+const hints={blink:'As cores de cada andar piscam alternadamente.',halloween:'Flashes duplos laranja entre sombras roxas e velas.',snow:'Flocos brancos descem sobre um fundo azul suave.',manual:'Escolher uma cor ativa as cores fixas por andar.',hsl_cycle:'Todos os andares percorrem as cores juntos em 8 s.',breathing:'As cores de cada andar pulsam suavemente em 4 s.',color_wave:'Cores diferentes percorrem os três andares.',chase:'A luz sobe e desce pelos andares em sequência.'};
+let state=null,busy=false,online=false,revision=0;
+for(let floor=0;floor<3;floor++){
+ const section=document.createElement('section');section.className='floor';
+ section.innerHTML=`<h2>${['03 / Andar superior','02 / Andar central','01 / Térreo'][floor]}</h2><div class="rooms">${[floor].map(i=>`<article class="room" id="room-${ids[i]}"><div class="room-top"><h3>${names[i]}</h3><button class="switch" role="switch" aria-checked="false" aria-label="Ligar ${names[i]}" data-room="${ids[i]}"></button></div><small class="room-state">Aguardando</small><div class="room-bottom"><label for="hue-${ids[i]}">Matiz</label><input type="range" min="0" max="359" step="1" id="hue-${ids[i]}" data-hue="${ids[i]}" value="0" aria-label="Matiz do ${names[i]} em graus"><output id="hue-value-${ids[i]}" for="hue-${ids[i]}">0°</output></div></article>`).join('')}</div>`;
+ $('floors').append(section);
+}
+function hueColor(h){const rise=Math.round((h%60)*255/60),fall=255-rise;return '#'+[[255,rise,0],[fall,255,0],[0,255,rise],[0,fall,255],[rise,0,255],[255,0,fall]][Math.floor(h/60)%6].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function colorHue(hex){const [r,g,b]=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;if(!d)return 0;const h=max===r?(g-b)/d:max===g?(b-r)/d+2:(r-g)/d+4;return Math.round((h*60+360)%360)%360}
+function previewHue(input){$('hue-value-'+input.dataset.hue).textContent=input.value+'\u00b0';input.style.setProperty('--hue',hueColor(Number(input.value)))}
+function availability(){document.querySelectorAll('button,input,select').forEach(el=>el.disabled=busy||!online)}
+function connection(ok){online=ok;$('connection').dataset.online=ok;$('connection').textContent=ok?'● Casinha conectada':'○ Sem conexão';availability()}
+function paint(next){state=next;connection(true);for(const room of state.floors){const card=$('room-'+room.id);card.dataset.on=room.on;card.style.setProperty('--light',room.rendered_color||room.color);const toggle=card.querySelector('button');toggle.setAttribute('aria-checked',String(room.on));toggle.setAttribute('aria-label',`${room.on?'Desligar':'Ligar'} ${names[ids.indexOf(room.id)]}`);card.querySelector('small').textContent=room.on?('Ligado \u00b7 '+effects[state.mode]):'Desligado';const input=$('hue-'+room.id);if(document.activeElement!==input){input.value=colorHue(room.color);previewHue(input)}}
+ if(document.activeElement!==$('brightness')){$('brightness').value=Math.round(state.brightness*100/255);$('brightnessValue').textContent=$('brightness').value+'%'}
+ $('mode').value=state.mode;$('snowControls').hidden=state.mode!=='snow';if(document.activeElement!==$('snowSpeed'))$('snowSpeed').value=state.snow_speed||3;if(document.activeElement!==$('snowDensity'))$('snowDensity').value=state.snow_density||4;$('modeHint').textContent=hints[state.mode];$('summary').textContent=`${state.floors.filter(r=>r.on).length} de 3 andares ligados · ${state.ip}`;
+}
+async function request(data){const response=await fetch(data?'/control':'/status',{method:data?'POST':'GET',headers:data?{'Content-Type':'application/x-www-form-urlencoded'}:{},body:data?new URLSearchParams(data):undefined,cache:'no-store',signal:AbortSignal.timeout(6000)});if(!response.ok)throw Error(response.status===401?'Recarregue a página e entre com o usuário e a senha da casinha.':'Não foi possível confirmar o comando.');return response.json()}
+async function command(data){if(busy||!online)return;busy=true;revision++;availability();try{paint(await request(data));$('error').textContent=''}catch(e){connection(false);$('error').textContent=e.message+' Verifique a conexão antes de tentar novamente.'}finally{busy=false;availability()}}
+document.querySelectorAll('[data-all]').forEach(el=>el.onclick=()=>command({action:'all',value:el.dataset.all}));
+document.querySelectorAll('[data-room]').forEach(el=>el.onclick=()=>command({action:'floor',id:el.dataset.room,on:String(!state.floors.find(r=>r.id===el.dataset.room).on)}));
+document.querySelectorAll('[data-hue]').forEach(el=>{el.oninput=()=>previewHue(el);el.onchange=()=>command({action:'floor',id:el.dataset.hue,color:hueColor(Number(el.value))})});
+$('brightness').oninput=()=>{$('brightnessValue').textContent=$('brightness').value+'%'};
+$('brightness').onchange=()=>command({action:'brightness',value:$('brightness').value});
+$('snowSpeed').onchange=()=>command({action:'snow',speed:$('snowSpeed').value});
+$('snowDensity').onchange=()=>command({action:'snow',density:$('snowDensity').value});
+$('mode').onchange=()=>command({action:'mode',value:$('mode').value});
+async function poll(){if(!busy){const version=revision;try{const next=await request();if(!busy&&version===revision){paint(next);$('error').textContent=''}}catch(e){if(!busy&&version===revision){connection(false);$('error').textContent='Sem resposta da casinha. Confira o hotspot e a alimentação. Tentando reconectar…'}}}setTimeout(poll,2500)}
+availability();poll();
+</script></body></html>)HTML";
